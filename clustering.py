@@ -36,6 +36,8 @@ def main():
     within_ss = {}
     total_ss = {}
     between_ss = {}
+    cent = {}
+    lab = {}
     KK = range(1, 11)
     for k in KK:
         
@@ -70,6 +72,8 @@ def main():
                 clust_data_[key] = [value]
 
         # Statistical analysis of clusters
+        cent[k] = centroids
+        lab[k] = kmeans.labels_
         size = [0]*k
         max = [0]*k
         min = [float('Inf')]*k
@@ -91,29 +95,17 @@ def main():
         print("\nFor n_clusters = ", k)
         for label in range(k) :
             print("Cluster " + str(label) + ": ")
-            print("\t[" + str(min[label]) + "," + str(max[label]) + "] within " + str(size[label]) + " instances.")
+            print("\t[" + str(min[label]) + "," + str(max[label]) + "] contains " + str(size[label]) + " instances.")
             print("\tThe centroid is in " + str(round_centroids[label]))
 
         if(k!=1): 
                 print("The average silhouette_score is : " + str(round_silhouette))
 
         '''
-        # Plot spectral
-        plt.figure()
-        cmap = cm.get_cmap("Spectral")
-        colors = cmap(kmeans.labels_.astype(float) / k)
-        plt.scatter(X[:, 0], [0]*len(X), marker='.', s=30, lw=0, alpha=0.7, c=colors, edgecolor='k')
 
-        # Draw white circles at cluster centroids
-        plt.scatter(centroids[:, 0], [0]*len(centroids), marker='o', c="white", alpha=1, s=200, edgecolor='k')
-
-        for i, c in enumerate(centroids):
-            plt.scatter(c[0], 0, marker='$%d$' % i, alpha=1,s=50, edgecolor='k')
-
-        plt.title("The visualization of the clustered data with " +  str(k) + " clusters.\n Avg silhouette: " + str(round_silhouette))
-        plt.set_yticklabels([])
-        plt.xlabel("Feature space for the heart rate")
         '''
+
+    kIdx = 5
 
     # Plot graph for elbow evaluation
     plt.figure()
@@ -123,7 +115,9 @@ def main():
     inter_clust = np.array(list(within_ss.values()))/np.array(list(total_ss.values()))
     inter_clust = [x*100 for x in inter_clust]
     plt.plot(KK, inter_clust, 'r.-', label='Intra-cluster') # within cluster
-    plt.plot(KK[2], intra_clust[2], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='r', markerfacecolor='None')
+    #plt.axvline(x=KK[kIdx-1], color="black", linestyle="--")
+    plt.plot(KK[kIdx-1], intra_clust[kIdx-1], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='k', markerfacecolor='None')
+    plt.plot(KK[kIdx-1], inter_clust[kIdx-1], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='k', markerfacecolor='None')
     plt.ylim((0,100))
     plt.grid(True)
     plt.xlabel('Number of clusters')
@@ -131,6 +125,26 @@ def main():
     plt.title('Elbow for KMeans clustering')
     plt.legend()
 
+
+    # Plot spectral
+    centroids = np.array(cent[kIdx])
+    labels = np.array(lab[kIdx])
+
+    plt.figure()
+    cmap = cm.get_cmap("Spectral")
+    colors = cmap(labels.astype(float) / kIdx)
+    plt.scatter(X[:, 0], [0]*len(X), marker='.', s=30, lw=0, alpha=0.7, c=colors, edgecolor='k')
+
+    # Draw white circles at cluster centroids
+    plt.scatter(centroids[:, 0], [0]*len(centroids), marker='o', c="white", alpha=1, s=200, edgecolor='k')
+
+    for i, c in enumerate(centroids):
+        plt.scatter(c[0], 0, marker='$%d$' % i, alpha=1,s=50, edgecolor='k', label=str(round(float(centroids[i]),2)))
+
+    plt.title("The visualization of the clustered data with " +  str(kIdx) + " clusters.")
+    plt.yticks([])
+    plt.xlabel("Feature space for the heart rate")
+    plt.legend()
     plt.show()
 
     # print states out 
