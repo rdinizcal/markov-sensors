@@ -36,7 +36,7 @@ def main():
     within_ss = {}
     total_ss = {}
     between_ss = {}
-    KK = range(1, 10)
+    KK = range(1, 11)
     for k in KK:
         
         '''
@@ -46,7 +46,8 @@ def main():
         kmeans = KMeans(n_clusters=k, init='k-means++', max_iter=1000, verbose=0).fit(X)
 
         # Silhouette
-        # silhouette_avg = silhouette_score(X, kmeans.labels_, sample_size=10000)
+        if(k!=1):
+            silhouette_avg = silhouette_score(X, kmeans.labels_, sample_size=10000)
 
         # Inter- and Intra- clustering sum of squared distances
         centroids = kmeans.cluster_centers_
@@ -81,20 +82,22 @@ def main():
         '''
         Display data
         '''
-        '''
         # Rounding for visualization
-        round_centroids = round(centroids,4)
-        round_silhouette = round(silhouette_avg,4)
+        round_centroids = [round(float(cent),4) for cent in centroids]
+        if(k!=1):
+            round_silhouette = round(silhouette_avg,4)
 
         # Print on screen the statistical analysis
         print("\nFor n_clusters = ", k)
         for label in range(k) :
             print("Cluster " + str(label) + ": ")
             print("\t[" + str(min[label]) + "," + str(max[label]) + "] within " + str(size[label]) + " instances.")
-            print("\tThe centroid is in " + str(round_centroids[label][0])
+            print("\tThe centroid is in " + str(round_centroids[label]))
 
-        print("The average silhouette_score is : " + str(round_silhouette))
+        if(k!=1): 
+                print("The average silhouette_score is : " + str(round_silhouette))
 
+        '''
         # Plot spectral
         plt.figure()
         cmap = cm.get_cmap("Spectral")
