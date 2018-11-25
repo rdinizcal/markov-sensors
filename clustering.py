@@ -116,24 +116,17 @@ def main():
     plt.figure()
     intra_clust = np.array(list(between_ss.values()))/np.array(list(total_ss.values()))
     intra_clust = [x*100 for x in intra_clust]
-    plt.plot(KK, intra_clust, 'b*-') # between cluster
+    plt.plot(KK, intra_clust, 'b.-', label='Inter-cluster') # between cluster
     inter_clust = np.array(list(within_ss.values()))/np.array(list(total_ss.values()))
     inter_clust = [x*100 for x in inter_clust]
-    plt.plot(KK, inter_clust, 'r*-') # within cluster
-    # plt.plot(KK[kIdx], betweenss[kIdx]/totss*100, marker='o', markersize=12, markeredgewidth=2, markeredgecolor='r', markerfacecolor='None')
+    plt.plot(KK, inter_clust, 'r.-', label='Intra-cluster') # within cluster
+    plt.plot(KK[2], intra_clust[2], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='r', markerfacecolor='None')
     plt.ylim((0,100))
     plt.grid(True)
     plt.xlabel('Number of clusters')
     plt.ylabel('Percentage of variance (%)')
     plt.title('Elbow for KMeans clustering')
-
-    '''
-    plt.figure()
-    plt.plot(list(sse.keys()), list(sse.values()))
-    plt.title("Elbow for KMeans clustering")
-    plt.xlabel("Number of cluster")
-    plt.ylabel("Sum of squared distances")
-    '''
+    plt.legend()
 
     plt.show()
 
