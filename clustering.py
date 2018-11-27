@@ -103,7 +103,7 @@ def main():
         Display data
         '''
         # Rounding for visualization
-        round_centroids = [round(float(cent),4) for cent in kmeans.cluster_centers_]
+        round_centroids = [round(float(cent),4) for cent in centers]
         #if(k!=1):
         #    round_silhouette = round(silhouette_avg,4)
 
@@ -117,7 +117,7 @@ def main():
         #if(k!=1): 
         #        print("The average silhouette_score is : " + str(round_silhouette))
 
-    kIdx = 3
+    kIdx = 5
 
     # Plot graph for elbow evaluation
     plt.figure()
@@ -159,7 +159,8 @@ def main():
     plt.scatter(centroids, [0]*len(centroids), marker='o', c="white", alpha=1, s=200, edgecolor='k')
 
     for i, c in enumerate(centroids):
-        plt.scatter(c, 0, marker='$%d$' % i, alpha=1,s=50, edgecolor='k', label=str(round(float(c),2)))
+        lab = str(round(float(c),2)) + ": [" + str(stats['min'][kIdx-1][i]) + "," + str(stats['max'][kIdx-1][i]) + "]"
+        plt.scatter(c, 0, marker='$%d$' % i, alpha=1,s=50, edgecolor='k', label=lab)
 
     plt.title("The visualization of the clustered data with " +  str(kIdx) + " clusters.")
     plt.yticks([])
@@ -169,7 +170,7 @@ def main():
     # Plot vertical bar (expect normal distribution) 
     plt.figure()
     for i, c in enumerate(centroids):
-        plt.bar(str(i), stats['size'][kIdx-1][i],align='center', alpha=0.5)
+        plt.bar(str(i), stats['size'][kIdx-1][i], width=1.0, align='center', alpha=0.5)
     plt.ylabel('Instances')
     plt.xlabel('Cluster label')
     plt.title('Clustered instances distribution')
