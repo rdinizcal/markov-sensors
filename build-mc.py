@@ -67,7 +67,7 @@ def main():
 	prevState = sList[0]
 	for line in tLines:
 		words = line.split(',')
-		val = float(words[7])
+		val = float(words[6])
 
 		flag = False
 		for currState in sList:
@@ -79,7 +79,7 @@ def main():
 				flag = True
 				break
 
-		if not flag : raise Exception (str(val) + " couldnt fit into any state!") 
+		#if not flag : raise Exception (str(val) + " couldnt fit into any state!") 
 	
 	mc.normalize()
 

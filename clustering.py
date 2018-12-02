@@ -25,7 +25,7 @@ def main():
     X = []
     for line in lines:
     	words = line.split(',')
-    	X.append(float(words[7]))
+    	X.append(float(words[6]))
 
     iFile.close()
     
@@ -122,27 +122,29 @@ def main():
     # Plot graph for elbow evaluation
     plt.figure()
 
-    # Plot intra-cluster
-    intra_clust = np.array(list(between_ss.values()))/np.array(list(total_ss.values()))
-    intra_clust = [x*100 for x in intra_clust]
-    plt.plot(KK, intra_clust, 'b.-', label='Inter-cluster') # between cluster
+    # Plot inter-cluster
+    #inter_clust = np.array(list(between_ss.values()))/np.array(list(total_ss.values()))
+    #inter_clust = np.array(list(between_ss.values()))
+    #inter_clust = [x/10000000 for x in inter_clust]
+    #plt.plot(KK, inter_clust, 'r.-', label='Inter-cluster') # between cluster
 
     # Plot inter-cluster
-    inter_clust = np.array(list(within_ss.values()))/np.array(list(total_ss.values()))
-    inter_clust = [x*100 for x in inter_clust]
-    plt.plot(KK, inter_clust, 'r.-', label='Intra-cluster') # within cluster
+    #intra_clust = np.array(list(within_ss.values()))/np.array(list(total_ss.values()))
+    intra_clust = np.array(list(within_ss.values()))
+    intra_clust = [x/10000000 for x in intra_clust]
+    plt.plot(KK, intra_clust, 'b.-', label='Intra-cluster') # within cluster
 
     # Mark the chosen cluster number
     #plt.axvline(x=KK[kIdx-1], color="black", linestyle="--")
-    plt.plot(KK[kIdx-1], intra_clust[kIdx-1], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='k', markerfacecolor='None')
-    plt.plot(KK[kIdx-1], inter_clust[kIdx-1], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='k', markerfacecolor='None')
+    #plt.plot(KK[kIdx-1], inter_clust[kIdx-1], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='k', markerfacecolor='None')
+    plt.plot(KK[kIdx-1], intra_clust[kIdx-1], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='r', markerfacecolor='None')
     
-    plt.ylim((0,100))
+    #plt.ylim((0,100))
     plt.grid(True)
-    plt.xlabel('Number of clusters')
     plt.locator_params(axis="x", nbins=10)
+    plt.xlabel('Number of clusters')
     plt.locator_params(axis="y", nbins=10)
-    plt.ylabel('Percentage of variance (%)')
+    plt.ylabel('Inertia')
     plt.title('Elbow for KMeans clustering')
     plt.legend()
 
