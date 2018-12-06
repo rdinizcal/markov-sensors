@@ -38,7 +38,12 @@ def getTime(index, str):
 '''
 def main():
 
-    exe = sys.argv[1]
+    if(len(sys.argv) > 1): 
+        exe = sys.argv[1]
+    else : 
+        print ("Please insert the execution directives:")
+        print ("[p input] for pre-processing the input file")
+        print ("[pp input out] for printing the pre-processing output at out.csv")
 
     # pre-process data
     if exe[0] is 'p':
@@ -114,17 +119,10 @@ def main():
                 if signal is not list:
                     for el in signal:
                         o_file.write(rid + "," + age + "," + gender + "," + height + "," + icutype + "," + weight + "," + el + "\n")
-                    
-                
-
-
-        #print(pr_data)
          
     # clustering
-
+    
     # build markov chain
-
-    # print markov chain
 
 
 if __name__ == "__main__":
