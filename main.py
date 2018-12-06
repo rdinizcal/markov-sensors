@@ -1,6 +1,7 @@
 import os
-import sys
 import re
+import sys
+
 
 # TODO : method extraction
 def getVal(index, str):
@@ -8,29 +9,35 @@ def getVal(index, str):
 	match = re.match("^[-+]?([0-9]+(\\.[0-9]+)?|\\.[0-9]+)$",arr[index])
 	return arr[index][match.start():match.end()]
 
-# TODO : method extraction
-def getICUType(_type):
-	
-	type = int(_type) 
-	
-	if (type == 1):
-		answer = "Coronary Care Unit"
-	elif (type == 2):
-		answer = "Cardiac Surgery Unit"
-	elif (type == 3):
-		answer = "Medical ICU"
-	elif (type == 4):
-		answer = "Surgical ICU"
-	else :
-		answer = "unknown"
-		
-	return answer
-
-# TODO : unused
+# TODO : deprecated
 def getTime(index, str):
 	arr = str.split(",")
 	match = re.match("^(?:(?:([01]?\\d|2[0-3]):)?([0-5]?\\d):)?([0-5]?\\d)$",arr[index])
 	return arr[index][match.start():match.end()]
+
+
+class Record : 
+
+    def __init__ (self, recordID, age, gender, height, icutype, weight):
+        self.recordID = recordID
+        self.age = age
+        self.gender = gender
+        self.height = height
+        self.weight = weight
+
+        icutype = int(icutype)
+        if (icutype == 1):
+            self.icutype = "Coronary Care Unit"
+        elif (icutype == 2):
+            self.icutype = "Cardiac Surgery Unit"
+        elif (icutype == 3):
+            self.icutype = "Medical ICU"
+        elif (icutype == 4):
+            self.icutype = "Surgical ICU"
+        else :
+            self.icutype = "unknown"
+        
+        self.vital_signals = {str: []}
 
 '''
     Input: Data path
@@ -44,6 +51,8 @@ def main():
         print ("Please insert the execution directives:")
         print ("[p input] for pre-processing the input file")
         print ("[pp input out] for printing the pre-processing output at out.csv")
+        print ()
+        return
 
     # pre-process data
     if exe[0] is 'p':
@@ -62,64 +71,61 @@ def main():
         #            'ICUType'     : [3],
         #            'Weight'      : [71.4],
         #            'HR'          : [132, 67, 81, 89, ...]} 
-        
-        pr_data = {int : {str : list}}
 
-        vital_signals = ["HR"] # vital signals to be processed
+        records = [] # records list
+
+        vital_signals = ['HR'] # vital signals to be processed
 
         for f in files:
             print("Reading " + f + "...")
             i_file = open(input_path+f, "r")
             lines = i_file.readlines()
-            del(lines[0]) # Time,Parameter,Value
+            del(lines[0]) # delete header (Time,Parameter,Value)
 
-            # read and build header
-            header = ['Age','Gender','Height','ICUType','Weight']
-            key = (getVal(2,lines[0])) 
-            pr_data[key] = {}
+            # read and build record object
+            recordID = (getVal(2,lines[0])) 
             del(lines[0])
-            for h in header:
-                if h is 'ICUType' : 
-                    pr_data[key][h] = getICUType(getVal(2,lines[0]))
-                else : 
-                    pr_data[key][h] = getVal(2,lines[0])
+            age = (getVal(2,lines[0])) 
+            del(lines[0])
+            gender = (getVal(2,lines[0])) 
+            del(lines[0]) 
+            height = (getVal(2,lines[0])) 
+            del(lines[0]) 
+            icutype = (getVal(2,lines[0])) 
+            del(lines[0]) 
+            weight = (getVal(2,lines[0])) 
+            del(lines[0]) 
 
-                del(lines[0])
+            record = Record(recordID, age, gender, height, icutype, weight)
 
-
-            # read and build vital signals
+            # read and append vital signals to record
             for line in lines:
                 for signal in vital_signals:
-                    if re.search(signal, line) :
-                        signal_key = signal
+                    if re.search(signal,line) :
+                        key = signal
                         value = getVal(2,line)
-                        if signal_key in pr_data[key]:
-                            pr_data[key][signal_key].append(value)
+                        if key in record.vital_signals:
+                            record.vital_signals[key].append(value)
                         else :
-                            pr_data[key][signal_key] = [value]
+                            record.vital_signals[key] = [value]
+
+            # insert record into list of records
+            records.append(record)
 
         if len(exe) > 1 and exe[1] is 'p':
+            
+            if len(sys.argv) < 4 : 
+                raise FileNotFoundError("Output filename not specified")
 
             output_fname = str(sys.argv[3])
             o_file = open(output_fname+".csv", "w+")
-            f_header = "RecordID,Age,Gender,Height,ICUType,Weight,HR\n"
+            f_header = "RecordID,Age,Gender,Height,ICUType,Weight,HR\n" 
             o_file.write(f_header)
 
-            for key,d in pr_data.items():
-                rid = key
-                signal = []
-                for k,v in d.items():
-                    if k is 'Age': age = v
-                    elif k is 'Gender': gender 	= v
-                    elif k is 'Height': height 	= v
-                    elif k is 'ICUType': icutype = v
-                    elif k is 'Weight': weight 	= v
-                    else: signal = v
-                
-                if signal is not list:
+            for record in records:
+                for name,signal in record.vital_signals.items():
                     for el in signal:
-                        o_file.write(rid + "," + age + "," + gender + "," + height + "," + icutype + "," + weight + "," + el + "\n")
-         
+                        o_file.write(record.recordID + "," + record.age + "," + record.gender + "," + record.height + "," + record.icutype + "," + record.weight + "," + el + "\n")
     # clustering
     
     # build markov chain
