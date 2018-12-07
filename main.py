@@ -2,6 +2,10 @@ import os
 import re
 import sys
 
+import numpy as np
+
+from scipy.spatial import distance
+from sklearn.cluster import KMeans
 
 # TODO : method extraction
 def getVal(index, str):
@@ -14,7 +18,6 @@ def getTime(index, str):
 	arr = str.split(",")
 	match = re.match("^(?:(?:([01]?\\d|2[0-3]):)?([0-5]?\\d):)?([0-5]?\\d)$",arr[index])
 	return arr[index][match.start():match.end()]
-
 
 class Record : 
 
@@ -38,6 +41,31 @@ class Record :
             self.icutype = "unknown"
         
         self.vital_signals = {str: []}
+
+class Cluster :
+
+    def __init__ (self, label, samples, centroid):
+        self.label = label
+        self.samples = samples
+        self.centroid = centroid
+    
+    def __str__(self):
+        return str(self.label) 
+
+class ClusterStat:
+
+    def __init__ (self, cluster):
+        self.cluster = cluster
+
+        self.min = min(cluster.samples)
+        self.max = max(cluster.samples)
+
+        if(self.min > self.max) : raise ValueError('Min: ' + str(self.min) + '> Max: ' + str(self.max)) 
+
+        self.size = len(cluster.samples)
+
+    def __str__(self):
+        return "Cluster " + str(self.cluster.label) + ": [" + str(self.min) + "," + str(self.max) + "]" + "\nCentroid: " + str(round(self.cluster.centroid,4))
 
 '''
     Input: Data path
@@ -63,15 +91,6 @@ def main():
         if not files: 
             raise FileNotFoundError("Empty input folder, try again.")
         
-        # initialize pre-processed data
-        # exmpl = {RecordID : 
-        #           {'Age'         : [24],
-        #            'Gender'      : [1],
-        #            'Height'      : [173],
-        #            'ICUType'     : [3],
-        #            'Weight'      : [71.4],
-        #            'HR'          : [132, 67, 81, 89, ...]} 
-
         records = [] # records list
 
         vital_signals = ['HR'] # vital signals to be processed
@@ -126,9 +145,87 @@ def main():
                 for name,signal in record.vital_signals.items():
                     for el in signal:
                         o_file.write(record.recordID + "," + record.age + "," + record.gender + "," + record.height + "," + record.icutype + "," + record.weight + "," + el + "\n")
-    # clustering
     
-    # build markov chain
+    # clustering
+    if len(records) < 1 : 
+        print("No record found, clustering process was terminated.")
+        return  
+
+    # put vital signals of every record in X structure
+    X = {str : list}
+    for record in records :
+        for name,signal in record.vital_signals.items() :
+            if name in X:
+                if signal : X[name].extend(signal)
+            else:
+                X[name] = signal
+
+    # sort all vital signals
+    (X[name].sort() for name in X)
+
+    for signal in vital_signals:
+        xArr = np.array(X[signal], dtype=float)
+        xArr = xArr.reshape(-1,1)
+
+        within_ss   = {}
+        total_ss    = {}
+        between_ss  = {}
+        
+        Kclust = range(1,6) # [1,...,10]
+        for k in Kclust :
+            '''
+            Compute clusters
+            '''
+            # Compute kmeans with k clusters
+            kmeans = KMeans(n_clusters=k, init='k-means++', max_iter=1000, verbose=0).fit(xArr)
+
+            # Inter- and Intra- clustering sum of squared distances
+            # Total within-cluster sum of squares
+            within_ss[k]    = kmeans.inertia_
+            # Total sum of squares
+            total_ss[k]     = sum(distance.sqeuclidean(xArr, cent) for cent in kmeans.cluster_centers_)
+            # Total between-cluster sum of squares  
+            between_ss[k]   = total_ss[k] - within_ss[k]
+
+            '''
+            Statistical analysis
+            '''
+
+            centers = kmeans.cluster_centers_
+            centers = [item for sublist in centers for item in sublist]
+
+            # Builds dictionary {label1: [sample1, sample2, sample3], label2: [sample1, sample2, sample3]}
+            clust_data = {}
+            for sample_idx in range(0,len(X[signal])):
+                label = kmeans.labels_[sample_idx]
+                sample = float(X[signal][sample_idx])
+                if label in clust_data:
+                    clust_data[label].append(sample)
+                else:
+                    clust_data[label] = [sample]
+            
+            # list of clusters
+            clusters = []
+            for label in clust_data:
+                cluster = Cluster(int(label),clust_data[label],0.0)
+                clusters.append(cluster)
+            
+            # sort list
+            centers.sort()
+            clusters.sort(key=lambda x: x.label)
+
+            for i in range(0,len(clusters)):
+                clusters[i].centroid = centers[i]
+
+            stats = [ClusterStat(cluster) for cluster in clusters]
+            
+            '''
+            Display data
+            '''
+            print("\nFor n_clusters = ", k)
+            for s in stats: print(s)
+
+            # build markov chain
 
 
 if __name__ == "__main__":
