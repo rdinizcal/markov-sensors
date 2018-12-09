@@ -10,17 +10,13 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance
 from sklearn.cluster import KMeans
 
+from dtmc import *
+
 
 # TODO : method extraction
 def getVal(index, str):
 	arr = str.split(",")
 	match = re.match("^[-+]?([0-9]+(\\.[0-9]+)?|\\.[0-9]+)$",arr[index])
-	return arr[index][match.start():match.end()]
-
-# TODO : deprecated
-def getTime(index, str):
-	arr = str.split(",")
-	match = re.match("^(?:(?:([01]?\\d|2[0-3]):)?([0-5]?\\d):)?([0-5]?\\d)$",arr[index])
 	return arr[index][match.start():match.end()]
 
 class Record : 
@@ -70,38 +66,6 @@ class ClusterStat:
 
     def __str__(self):
         return "Cluster " + str(self.cluster.label) + ": [" + str(self.min) + "," + str(self.max) + "]" + "\nCentroid: " + str(round(self.cluster.centroid,4))
-
-class MarkovChain:
-
-	def __init__(self, states):
-		self.states = states
-		self.transitions = 0
-		self.transitionMatrix = np.zeros( (states, states) )
-		self.normalizedTransitionMatrix = np.zeros( (states, states) )
-
-	def addTrasition(self, incomingState, outcomingState):
-		self.transitions += 1
-		self.transitionMatrix[incomingState][outcomingState] += 1
-
-	def normalize(self):	
-		lSum = np.zeros( self.states )
-		for (line,col),value in np.ndenumerate(self.transitionMatrix):	
-			lSum[line] += value
-
-		for (line,col),value in np.ndenumerate(self.transitionMatrix):	
-			self.normalizedTransitionMatrix[line][col] = round(value/lSum[line],2)
-				
-class State:
-
-	# constructor
-	def __init__(self):
-		self.identifier = 0
-		self.lowerBound = 0
-		self.upperBound = 0
-    
-	# methods
-	def contains(self,x):
-		return True if(self.lowerBound <= x < self.upperBound) else False
 	
 '''
     Input: Data path
@@ -373,7 +337,7 @@ def main():
         print("\nTransition Matrix: \n" + str(mc.transitionMatrix))
         print("\nNormalized Transition Matrix: \n" + str(mc.normalizedTransitionMatrix))
 
-        outputFilename = str(signal)+"mc.txt"
+        outputFilename = str(signal)+"_mc.txt"
         outputFile = open(outputFilename, "w+")
         outputFile.write(str(mc.normalizedTransitionMatrix))
         outputFile.close()
