@@ -331,7 +331,7 @@ def main():
 
         plt.title("Clustered data with " +  str(kIdx) + " clusters.")
         plt.yticks([])
-        plt.xlabel("Feature space for heart rate")
+        plt.xlabel("Feature space for " + signal)
         plt.legend()
 
         # Plot vertical bar (expect normal distribution) 
