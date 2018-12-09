@@ -71,6 +71,38 @@ class ClusterStat:
     def __str__(self):
         return "Cluster " + str(self.cluster.label) + ": [" + str(self.min) + "," + str(self.max) + "]" + "\nCentroid: " + str(round(self.cluster.centroid,4))
 
+class MarkovChain:
+
+	def __init__(self, states):
+		self.states = states
+		self.transitions = 0
+		self.transitionMatrix = np.zeros( (states, states) )
+		self.normalizedTransitionMatrix = np.zeros( (states, states) )
+
+	def addTrasition(self, incomingState, outcomingState):
+		self.transitions += 1
+		self.transitionMatrix[incomingState][outcomingState] += 1
+
+	def normalize(self):	
+		lSum = np.zeros( self.states )
+		for (line,col),value in np.ndenumerate(self.transitionMatrix):	
+			lSum[line] += value
+
+		for (line,col),value in np.ndenumerate(self.transitionMatrix):	
+			self.normalizedTransitionMatrix[line][col] = round(value/lSum[line],2)
+				
+class State:
+
+	# constructor
+	def __init__(self):
+		self.identifier = 0
+		self.lowerBound = 0
+		self.upperBound = 0
+    
+	# methods
+	def contains(self,x):
+		return True if(self.lowerBound <= x < self.upperBound) else False
+	
 '''
     Input: Data path
     Output: DTMC
@@ -86,6 +118,8 @@ def main():
         print ()
         return
 
+    records = [] # records list
+
     # pre-process data
     if exe[0] is 'p':
 
@@ -95,8 +129,6 @@ def main():
         if not files: 
             raise FileNotFoundError("Empty input folder, try again.")
         
-        records = [] # records list
-
         vital_signals = ['HR'] # vital signals to be processed
 
         for f in files:
@@ -164,6 +196,7 @@ def main():
             else:
                 X[name] = signal
 
+    Xu = X # unsorted X, used for markov chain
     # sort all vital signals
     (X[name].sort() for name in X)
 
@@ -257,6 +290,7 @@ def main():
         plt.pause(0.001)
 
         kIdx = int(input("\nOptimal number of clusters: "))
+        clustStatsList = stats[kIdx]
 
         #plt.ylim((0,100))
         plt.grid(True)
@@ -271,11 +305,11 @@ def main():
         plt.plot(clustRange[kIdx-1], intra_clust[kIdx-1], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='r', markerfacecolor='None')
 
         # Plot spectral
-        centroids = np.array([clustStat.cluster.centroid for clustStat in stats[kIdx]])
+        centroids = np.array([clustStat.cluster.centroid for clustStat in clustStatsList])
 
         lArr = []
         for sample in xArr[:, 0]:
-            for clustStat in stats[kIdx]:
+            for clustStat in clustStatsList:
                 if sample >= clustStat.min and sample <= clustStat.max:
                     lArr.append(clustStat.cluster.label) 
 
@@ -292,7 +326,7 @@ def main():
         plt.scatter(centroids, [0]*len(centroids), marker='o', c="white", alpha=1, s=100, edgecolor='k')
 
         for i, c in enumerate(centroids):
-            lab = str(round(float(c),2)) + ": [" + str(stats[kIdx][i].min) + "," + str(stats[kIdx][i].max) + "]"
+            lab = str(round(float(c),2)) + ": [" + str(clustStatsList[i].min) + "," + str(clustStatsList[i].max) + "]"
             plt.scatter(c, 0, marker='$%d$' % i, alpha=1,s=25, edgecolor='k', label=lab)
 
         plt.title("Clustered data with " +  str(kIdx) + " clusters.")
@@ -303,7 +337,7 @@ def main():
         # Plot vertical bar (expect normal distribution) 
         plt.figure()
         for i, c in enumerate(centroids):
-            plt.bar(str(i), stats[kIdx][i].size, width=1.0, align='center', alpha=0.5)
+            plt.bar(str(i), clustStatsList[i].size, width=1.0, align='center', alpha=0.5)
         plt.ylabel('Instances')
         plt.xlabel('Cluster label')
         plt.title('Clustered instances distribution')
@@ -311,10 +345,38 @@ def main():
         plt.draw()
         plt.pause(0.001)
 
-        input("\nPress [enter] to continue.")
+        input("\nPress [enter] to build the markov chains.")
 
-    # build markov chain
+        # build markov chain
+        states = [ State() for i in range(len(clustStatsList))]
+        for i,clustStat in enumerate(clustStatsList):
+            states[i].identifier = clustStat.cluster.label
+            states[i].lowerBound = clustStat.min
+            states[i].upperBound = clustStat.max
 
+        mc = MarkovChain(len(states))
+
+        prevState = states[0]
+        for sample in Xu[signal]:
+            for currState in states:
+                if currState.contains(float(sample)) : 
+                    mc.addTrasition(int(prevState.identifier),int(currState.identifier)) 
+                    prevState = currState
+                    break
+
+            #if not flag : raise Exception (str(sample) + " couldnt fit into any state!")
+
+        mc.normalize()
+
+        print("\nStates: " + str(mc.states))
+        print("\nTransitions: " + str(mc.transitions))
+        print("\nTransition Matrix: \n" + str(mc.transitionMatrix))
+        print("\nNormalized Transition Matrix: \n" + str(mc.normalizedTransitionMatrix))
+
+        outputFilename = str(signal)+"mc.txt"
+        outputFile = open(outputFilename, "w+")
+        outputFile.write(str(mc.normalizedTransitionMatrix))
+        outputFile.close()
 
 if __name__ == "__main__":
     main()
