@@ -4,8 +4,12 @@ import sys
 
 import numpy as np
 
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+
 from scipy.spatial import distance
 from sklearn.cluster import KMeans
+
 
 # TODO : method extraction
 def getVal(index, str):
@@ -50,7 +54,7 @@ class Cluster :
         self.centroid = centroid
     
     def __str__(self):
-        return str(self.label) 
+        return str(self.label) + ": " + str(self.centroid)
 
 class ClusterStat:
 
@@ -170,9 +174,10 @@ def main():
         within_ss   = {}
         total_ss    = {}
         between_ss  = {}
+        stats = {int:list} # cluster numebr : cluster stats list
         
-        Kclust = range(1,6) # [1,...,10]
-        for k in Kclust :
+        clustRange = range(1,11) # [1,...,10]
+        for k in clustRange :
             '''
             Compute clusters
             '''
@@ -204,28 +209,111 @@ def main():
                 else:
                     clust_data[label] = [sample]
             
-            # list of clusters
             clusters = []
             for label in clust_data:
                 cluster = Cluster(int(label),clust_data[label],0.0)
                 clusters.append(cluster)
-            
-            # sort list
-            centers.sort()
-            clusters.sort(key=lambda x: x.label)
 
             for i in range(0,len(clusters)):
                 clusters[i].centroid = centers[i]
+            
+            # sort clusters
+            clusters.sort(key=lambda x: x.centroid)
 
-            stats = [ClusterStat(cluster) for cluster in clusters]
+            # relabeling clusters to crescent order
+            for i,cluster in enumerate(clusters): cluster.label = i
+
+            statList = [ClusterStat(cluster) for cluster in clusters]
             
             '''
             Display data
             '''
             print("\nFor n_clusters = ", k)
-            for s in stats: print(s)
+            for s in statList: print(s)
 
-            # build markov chain
+            stats[k] = statList
+        
+        '''
+        Plot elbow graph for clustering size choice
+        '''
+        plt.figure()
+
+        # Plot intra-cluster
+        #intra_clust = np.array(list(within_ss.values()))/np.array(list(total_ss.values()))
+        intra_clust = np.array(list(within_ss.values()))
+        intra_clust = [x for x in intra_clust]
+        plt.plot(clustRange, intra_clust, 'b.-', label='Intra-cluster') # within cluster
+
+        #plt.ylim((0,100))
+        plt.grid(True)
+        plt.locator_params(axis="x", nbins=10)
+        plt.xlabel('Number of clusters')
+        plt.locator_params(axis="y", nbins=10)
+        plt.ylabel('Inertia')
+        plt.title('Elbow method for KMeans clustering for ' + signal + ' signal')
+        plt.legend()
+
+        plt.draw()
+        plt.pause(0.001)
+
+        kIdx = int(input("\nOptimal number of clusters: "))
+
+        #plt.ylim((0,100))
+        plt.grid(True)
+        plt.locator_params(axis="x", nbins=10)
+        plt.xlabel('Number of clusters')
+        plt.locator_params(axis="y", nbins=10)
+        plt.ylabel('Inertia')
+        plt.title('Elbow method for KMeans clustering for ' + signal + ' signal')
+        plt.legend()
+
+        # Mark the chosen cluster number
+        plt.plot(clustRange[kIdx-1], intra_clust[kIdx-1], marker='o', markersize=12, markeredgewidth=2, markeredgecolor='r', markerfacecolor='None')
+
+        # Plot spectral
+        centroids = np.array([clustStat.cluster.centroid for clustStat in stats[kIdx]])
+
+        lArr = []
+        for sample in xArr[:, 0]:
+            for clustStat in stats[kIdx]:
+                if sample >= clustStat.min and sample <= clustStat.max:
+                    lArr.append(clustStat.cluster.label) 
+
+        labels = np.array(lArr)
+
+        plt.figure()
+
+        cmap = cm.get_cmap('tab10')
+        colors = cmap(labels)
+        
+        plt.scatter(xArr[:, 0], [0]*len(xArr), marker='.', s=30, lw=0, alpha=0.7, c=colors, edgecolor='k')
+
+        # Draw white circles at cluster centroids
+        plt.scatter(centroids, [0]*len(centroids), marker='o', c="white", alpha=1, s=100, edgecolor='k')
+
+        for i, c in enumerate(centroids):
+            lab = str(round(float(c),2)) + ": [" + str(stats[kIdx][i].min) + "," + str(stats[kIdx][i].max) + "]"
+            plt.scatter(c, 0, marker='$%d$' % i, alpha=1,s=25, edgecolor='k', label=lab)
+
+        plt.title("Clustered data with " +  str(kIdx) + " clusters.")
+        plt.yticks([])
+        plt.xlabel("Feature space for heart rate")
+        plt.legend()
+
+        # Plot vertical bar (expect normal distribution) 
+        plt.figure()
+        for i, c in enumerate(centroids):
+            plt.bar(str(i), stats[kIdx][i].size, width=1.0, align='center', alpha=0.5)
+        plt.ylabel('Instances')
+        plt.xlabel('Cluster label')
+        plt.title('Clustered instances distribution')
+        
+        plt.draw()
+        plt.pause(0.001)
+
+        input("\nPress [enter] to continue.")
+
+    # build markov chain
 
 
 if __name__ == "__main__":
