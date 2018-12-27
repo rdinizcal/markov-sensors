@@ -2,24 +2,75 @@ import os
 import re
 import sys
 
-import numpy as np
-
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-
+import numpy as np
 from scipy.spatial import distance
 from sklearn.cluster import KMeans
 
+from cluster import *
 from dtmc import *
 from record import *
-from cluster import *
- 
+
 
 # TODO : method extraction
 def getVal(index, str):
 	arr = str.split(",")
 	match = re.match("^[-+]?([0-9]+(\\.[0-9]+)?|\\.[0-9]+)$",arr[index])
 	return arr[index][match.start():match.end()]
+
+'''
+    Description: Filter signals to be processed
+    Input: records "list(Record)"
+    Output: {str:list} "{vital signal name: list of values}"
+'''
+def selectSignal(records):
+    X = {str : list}
+
+    for record in records :
+
+        for name,signal in record.vital_signals.items() :
+            
+            if not signal: continue
+            
+            for el in signal:
+                # Removing outliers
+                if float(el) < 0: continue
+                if name == "Temp" and float(el) < 24: continue 
+                    
+                if name in X:
+                    X[name].append(el)
+                else:
+                    X[name] = [el]
+    
+    return X
+
+'''
+    Description: Filter signals to be processed
+    Input: records "list(Record)"
+    Output: {str:list} "{vital signal name: list of values}"
+'''
+def filterRecords(records):
+    X = {str : list}
+
+    for record in records :
+
+        # Insert here your attribute filtering rule
+        #if record.icutype != "Surgical ICU": continue
+        if int(record.age) < 0 or int(record.age) > 18: continue
+
+        for name,signal in record.vital_signals.items() :
+            
+            if not signal: continue
+            
+            for el in signal:
+
+                if name in X:
+                    X[name].append(el)
+                else:
+                    X[name] = [el]
+    
+    return X
 
 '''
     Input: Data path
@@ -37,8 +88,13 @@ def main():
         return
 
     records = [] # records list
+    vital_signals = ['HR','Temp','SaO2','NIDiasABP','NISysABP'] # vital signals to be processed
+    clustRange = range(1,11) # [1,...,20]
 
-    # pre-process data
+
+    '''
+    PRE-PROCESS
+    '''
     if exe[0] is 'p':
 
         input_path = sys.argv[2]
@@ -46,8 +102,6 @@ def main():
         files = os.listdir(input_path)
         if not files: 
             raise FileNotFoundError("Empty input folder, try again.")
-        
-        vital_signals = ['HR'] # vital signals to be processed
 
         for f in files:
             print("Reading " + f + "...")
@@ -100,21 +154,16 @@ def main():
                     for el in signal:
                         o_file.write(record.recordID + "," + record.age + "," + record.gender + "," + record.height + "," + record.icutype + "," + record.weight + "," + el + "\n")
     
-    # clustering
+    '''
+    K-MEANS CLUSTERING
+    '''
     if len(records) < 1 : 
         print("No record found, clustering process was terminated.")
         return  
+    
+    # select and insert vital signals in X
+    X = selectSignal(records)
 
-    # put vital signals of every record in X structure
-    X = {str : list}
-    for record in records :
-        for name,signal in record.vital_signals.items() :
-            if name in X:
-                if signal : X[name].extend(signal)
-            else:
-                X[name] = signal
-
-    Xu = X # unsorted X, used for markov chain
     # sort all vital signals
     (X[name].sort() for name in X)
 
@@ -127,7 +176,6 @@ def main():
         between_ss  = {}
         stats = {int:list} # cluster numebr : cluster stats list
         
-        clustRange = range(1,11) # [1,...,10]
         for k in clustRange :
             '''
             Compute clusters
@@ -190,32 +238,33 @@ def main():
         plt.figure()
 
         # Plot intra-cluster
-        #intra_clust = np.array(list(within_ss.values()))/np.array(list(total_ss.values()))
-        intra_clust = np.array(list(within_ss.values()))
-        intra_clust = [x for x in intra_clust]
+        intra_clust = np.array(list(within_ss.values()))/np.array(list(total_ss.values()))
+        #intra_clust = np.array(list(within_ss.values()))
+        intra_clust = [x*100 for x in intra_clust]
         plt.plot(clustRange, intra_clust, 'b.-', label='Intra-cluster') # within cluster
 
-        #plt.ylim((0,100))
+        plt.ylim((0,100))
         plt.grid(True)
-        plt.locator_params(axis="x", nbins=10)
+        plt.locator_params(axis="x", nbins=len(clustRange))
         plt.xlabel('Number of clusters')
         plt.locator_params(axis="y", nbins=10)
-        plt.ylabel('Inertia')
+        plt.ylabel('Inertia (%)')
         plt.title('Elbow method for KMeans clustering for ' + signal + ' signal')
         plt.legend()
 
         plt.draw()
         plt.pause(0.001)
-
         kIdx = int(input("\nOptimal number of clusters: "))
+        
+        #kIdx = 5
         clustStatsList = stats[kIdx]
 
-        #plt.ylim((0,100))
+        plt.ylim((0,100))
         plt.grid(True)
-        plt.locator_params(axis="x", nbins=10)
+        plt.locator_params(axis="x", nbins=len(clustRange))
         plt.xlabel('Number of clusters')
         plt.locator_params(axis="y", nbins=10)
-        plt.ylabel('Inertia')
+        plt.ylabel('Inertia (%)')
         plt.title('Elbow method for KMeans clustering for ' + signal + ' signal')
         plt.legend()
 
@@ -262,20 +311,25 @@ def main():
         
         plt.draw()
         plt.pause(0.001)
+        
 
-        input("\nPress [enter] to build the markov chains.")
-
-        # build markov chain
+        '''
+        BUILD DTMCs
+        '''
         states = [ State() for i in range(len(clustStatsList))]
         for i,clustStat in enumerate(clustStatsList):
             states[i].identifier = clustStat.cluster.label
             states[i].lowerBound = clustStat.min
             states[i].upperBound = clustStat.max
 
-        mc = MarkovChain(len(states))
+        print(len(states))
+        mc = MarkovChain(states)
+        
+        Xu = filterRecords(records)
 
         prevState = states[0]
         for sample in Xu[signal]:
+
             for currState in states:
                 if currState.contains(float(sample)) : 
                     mc.addTrasition(int(prevState.identifier),int(currState.identifier)) 
@@ -286,15 +340,21 @@ def main():
 
         mc.normalize()
 
-        print("\nStates: " + str(mc.states))
+        print("\nStates: ")
+        for state in mc.states: print("\t"+str(state))
         print("\nTransitions: " + str(mc.transitions))
         print("\nTransition Matrix: \n" + str(mc.transitionMatrix))
         print("\nNormalized Transition Matrix: \n" + str(mc.normalizedTransitionMatrix))
 
         outputFilename = str(signal)+"_mc.txt"
         outputFile = open(outputFilename, "w+")
-        outputFile.write(str(mc.normalizedTransitionMatrix))
+        outputFile.write("States: ")
+        for state in mc.states: outputFile.write("\t"+str(state))
+        outputFile.write("\n\nTransitions: " + str(mc.transitions))
+        outputFile.write("\n\nTransition Matrix: \n" + str(mc.normalizedTransitionMatrix))
         outputFile.close()
+
+        input("\nPress [enter] to continue.")
 
 if __name__ == "__main__":
     main()

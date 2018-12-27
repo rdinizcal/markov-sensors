@@ -106,8 +106,9 @@ venv.bak/
 # vscode
 .vscode/
 
-# data
+# experimental files and folders
 data/
+results/
 
 # output files
 *.txt

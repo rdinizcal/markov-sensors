@@ -4,16 +4,17 @@ class MarkovChain:
 
 	def __init__(self, states):
 		self.states = states
+		self.n_states = len(states)
 		self.transitions = 0
-		self.transitionMatrix = np.zeros( (states, states) )
-		self.normalizedTransitionMatrix = np.zeros( (states, states) )
+		self.transitionMatrix = np.zeros( (self.n_states, self.n_states) )
+		self.normalizedTransitionMatrix = np.zeros( (self.n_states, self.n_states) )
 
 	def addTrasition(self, incomingState, outcomingState):
 		self.transitions += 1
 		self.transitionMatrix[incomingState][outcomingState] += 1
 
 	def normalize(self):	
-		lSum = np.zeros( self.states )
+		lSum = np.zeros( self.n_states )
 		for (line,col),value in np.ndenumerate(self.transitionMatrix):	
 			lSum[line] += value
 
@@ -22,12 +23,13 @@ class MarkovChain:
 				
 class State:
 
-	# constructor
 	def __init__(self):
 		self.identifier = 0
 		self.lowerBound = 0
 		self.upperBound = 0
     
-	# methods
 	def contains(self,x):
 		return True if(self.lowerBound <= x < self.upperBound) else False
+	
+	def __str__(self):
+		return str(self.identifier) + ": [" + str(self.lowerBound) + "," + str(self.upperBound) + "]"
