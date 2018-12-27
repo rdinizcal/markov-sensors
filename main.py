@@ -28,7 +28,7 @@ def selectSignal(records):
     X = {str : list}
 
     for record in records :
-
+        
         for name,signal in record.vital_signals.items() :
             
             if not signal: continue
@@ -57,7 +57,12 @@ def filterRecords(records):
 
         # Insert here your attribute filtering rule
         #if record.icutype != "Surgical ICU": continue
-        if int(record.age) < 0 or int(record.age) > 18: continue
+        #if int(record.age) < 60: continue
+        weight_kg = float(record.weight)
+        height_m = float(record.height)/100
+        if weight_kg == 0 or height_m == 0: continue
+        BMI = weight_kg/(height_m*height_m)
+        if BMI < 40: continue
 
         for name,signal in record.vital_signals.items() :
             
@@ -72,7 +77,7 @@ def filterRecords(records):
     
     return X
 
-def define_states(signal):
+def hardcoded_states(signal):
 
     if signal == 'HR':
         states = [ State() for i in range(5) ]
@@ -141,7 +146,7 @@ def define_states(signal):
 
         states[1].identifier = 1
         states[1].lowerBound = 80
-        states[1].upperBound = 89
+        states[1].upperBound = 90
 
         states[2].identifier = 2
         states[2].lowerBound = 90
@@ -169,33 +174,22 @@ def define_states(signal):
 '''
 def main():
 
-    if(len(sys.argv) > 1): 
-        exe = sys.argv[1]
-    else : 
-        print ("Please insert the execution directives:")
-        print ("[p input] for pre-processing the input file")
-        print ("[pp input out] for printing the pre-processing output at out.csv")
-        print ()
-        return
-
     records = [] # records list
     vital_signals = ['HR','Temp','SaO2','NIDiasABP','NISysABP'] # vital signals to be processed
-    clustRange = range(1,11) # [1,...,20]
-
 
     '''
     PRE-PROCESS
     '''
-    if exe[0] is 'p':
-
-        input_path = sys.argv[2]
-
+    input_paths = ["data/set-a/", "data/set-b/"]
+    count = 1
+    for input_path in input_paths:
+        
         files = os.listdir(input_path)
         if not files: 
             raise FileNotFoundError("Empty input folder, try again.")
 
         for f in files:
-            print("Reading " + f + "...")
+            print(str(count) + ". reading " + f + "...")
             i_file = open(input_path+f, "r")
             lines = i_file.readlines()
             del(lines[0]) # delete header (Time,Parameter,Value)
@@ -229,21 +223,7 @@ def main():
 
             # insert record into list of records
             records.append(record)
-
-        if len(exe) > 1 and exe[1] is 'p':
-            
-            if len(sys.argv) < 4 : 
-                raise FileNotFoundError("Output filename not specified")
-
-            output_fname = str(sys.argv[3])
-            o_file = open(output_fname+".csv", "w+")
-            f_header = "RecordID,Age,Gender,Height,ICUType,Weight,HR\n" 
-            o_file.write(f_header)
-
-            for record in records:
-                for name,signal in record.vital_signals.items():
-                    for el in signal:
-                        o_file.write(record.recordID + "," + record.age + "," + record.gender + "," + record.height + "," + record.icutype + "," + record.weight + "," + el + "\n")
+            count+=1
 
     '''
     BUILD DTMCs
@@ -251,12 +231,11 @@ def main():
 
     for signal in vital_signals:
 
-        states = define_states(signal)
-
-        print(len(states))
+        states = hardcoded_states(signal)
         mc = MarkovChain(states)
         
         Xu = filterRecords(records)
+        if signal not in Xu: continue
 
         prevState = states[0]
         for sample in Xu[signal]:

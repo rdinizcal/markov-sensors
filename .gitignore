@@ -108,7 +108,6 @@ venv.bak/
 
 # experimental files and folders
 data/
-results/
 
 # output files
 *.txt
