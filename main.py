@@ -37,7 +37,7 @@ def selectSignal(records):
                 # Removing outliers
                 if float(el) < 0: continue
                 if name == "Temp" and float(el) < 24: continue 
-                    
+
                 if name in X:
                     X[name].append(el)
                 else:
@@ -71,6 +71,97 @@ def filterRecords(records):
                     X[name] = [el]
     
     return X
+
+def define_states(signal):
+
+    if signal == 'HR':
+        states = [ State() for i in range(5) ]
+
+        states[0].identifier = 0
+        states[0].lowerBound = 0
+        states[0].upperBound = 70
+
+        states[1].identifier = 1
+        states[1].lowerBound = 70
+        states[1].upperBound = 85
+
+        states[2].identifier = 2
+        states[2].lowerBound = 85
+        states[2].upperBound = 97
+
+        states[3].identifier = 3
+        states[3].lowerBound = 97
+        states[3].upperBound = 115
+
+        states[4].identifier = 4
+        states[4].lowerBound = 115
+        states[4].upperBound = 300
+    elif signal == "Temp": 
+        states = [ State() for i in range(5) ]
+
+        states[0].identifier = 0
+        states[0].lowerBound = 0
+        states[0].upperBound = 32
+
+        states[1].identifier = 1
+        states[1].lowerBound = 32
+        states[1].upperBound = 36
+
+        states[2].identifier = 2
+        states[2].lowerBound = 36
+        states[2].upperBound = 38
+
+        states[3].identifier = 3
+        states[3].lowerBound = 38
+        states[3].upperBound = 41
+
+        states[4].identifier = 4
+        states[4].lowerBound = 41
+        states[4].upperBound = 100
+    elif signal == 'SaO2':
+        states = [ State() for i in range(3) ]
+
+        states[0].identifier = 0
+        states[0].lowerBound = 0
+        states[0].upperBound = 55
+
+        states[1].identifier = 1
+        states[1].lowerBound = 55
+        states[1].upperBound = 65
+
+        states[2].identifier = 2
+        states[2].lowerBound = 65
+        states[2].upperBound = 100
+    elif signal == 'NIDiasABP':
+        states = [ State() for i in range(3) ]
+
+        states[0].identifier = 0
+        states[0].lowerBound = 0
+        states[0].upperBound = 80
+
+        states[1].identifier = 1
+        states[1].lowerBound = 80
+        states[1].upperBound = 89
+
+        states[2].identifier = 2
+        states[2].lowerBound = 90
+        states[2].upperBound = 300
+    elif signal == 'NISysABP':
+        states = [ State() for i in range(3) ]
+
+        states[0].identifier = 0
+        states[0].lowerBound = 0
+        states[0].upperBound = 120
+
+        states[1].identifier = 1
+        states[1].lowerBound = 120
+        states[1].upperBound = 140
+
+        states[2].identifier = 2
+        states[2].lowerBound = 140
+        states[2].upperBound = 300
+
+    return states
 
 '''
     Input: Data path
@@ -156,7 +247,7 @@ def main():
     
     '''
     K-MEANS CLUSTERING
-    '''
+    
     if len(records) < 1 : 
         print("No record found, clustering process was terminated.")
         return  
@@ -177,9 +268,7 @@ def main():
         stats = {int:list} # cluster numebr : cluster stats list
         
         for k in clustRange :
-            '''
-            Compute clusters
-            '''
+            # Compute clusters
             # Compute kmeans with k clusters
             kmeans = KMeans(n_clusters=k, init='k-means++', max_iter=1000, verbose=0).fit(xArr)
 
@@ -191,10 +280,7 @@ def main():
             # Total between-cluster sum of squares  
             between_ss[k]   = total_ss[k] - within_ss[k]
 
-            '''
-            Statistical analysis
-            '''
-
+            # Statistical analysis
             centers = kmeans.cluster_centers_
             centers = [item for sublist in centers for item in sublist]
 
@@ -224,17 +310,15 @@ def main():
 
             statList = [ClusterStat(cluster) for cluster in clusters]
             
-            '''
-            Display data
-            '''
+            # Display data
             print("\nFor n_clusters = ", k)
             for s in statList: print(s)
 
             stats[k] = statList
         
-        '''
-        Plot elbow graph for clustering size choice
-        '''
+        
+        # Plot elbow graph for clustering size choice
+        
         plt.figure()
 
         # Plot intra-cluster
@@ -311,16 +395,22 @@ def main():
         
         plt.draw()
         plt.pause(0.001)
-        
+        '''
 
-        '''
-        BUILD DTMCs
-        '''
-        states = [ State() for i in range(len(clustStatsList))]
-        for i,clustStat in enumerate(clustStatsList):
-            states[i].identifier = clustStat.cluster.label
-            states[i].lowerBound = clustStat.min
-            states[i].upperBound = clustStat.max
+    '''
+    BUILD DTMCs
+    '''
+    '''
+    states = [ State() for i in range(len(clustStatsList))]
+    for i,clustStat in enumerate(clustStatsList):
+        states[i].identifier = clustStat.cluster.label
+        states[i].lowerBound = clustStat.min
+        states[i].upperBound = clustStat.max
+    '''
+
+    for signal in vital_signals:
+
+        states = define_states(signal)
 
         print(len(states))
         mc = MarkovChain(states)
