@@ -110,5 +110,4 @@ venv.bak/
 data/
 
 # output files
-*.txt
 *.csv
