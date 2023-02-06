@@ -1,21 +1,31 @@
-Experimental set 21/12
+# Clustering Results 
 
-1. Extract all records from the input data (set-a, set-b and set-c)
+The final results are documented in `results/`
+
+## First Cycle
+
+Experimental set from 21/12
+
+1. Extract all records from the input data (set-a, set-b and set-c) -- Downloaded from the physionet source
 
 2. Obtain features for through k-means technique
+
+```
     vital_signals = ['HR','Temp','SaO2','NIDiasABP','NISysABP']
     HR - heart rate
     Temp - temperature
     SaO2 - O2 saturation level
     NIDiasABP - Non-invasive disatolic blood pressure
     NISysABP - Non-invasive systolic blood pressure
+```
 
-3. Build DTMC
-    filter here samples that will be part of the dtmc (e.g. cardiacsurgeryunit, medicalicu)
+3. Build Discrete-Time Markov Chain (DTMC) -- filter here samples that will be part of the dtmc (e.g. cardiacsurgeryunit, medicalicu)
 
-Experimental set 27/12
+## Second Cycle
 
-1. 8,000 records from set-a and set-b
+Experimental set from 26/12
+
+1. 8,000 records from set-a and set-b -- Downloaded from physionet
 
 2. vital_signals = ['HR','Temp','SaO2','NIDiasABP','NISysABP']
 
@@ -71,6 +81,4 @@ Experimental set 27/12
         Coronary Surgery Unit
         Medical ICU
         Surgical ICU
-
-5. Resulting markov chains in 'results/'
 
