@@ -10,11 +10,6 @@ The goal of the project is to model vital signs from a dataset available online 
   - [Prerequisites](#prerequisites)
   - [Running the code](#installation)
 
- 
-- results -- contains the documented models, i.e., reprensetation of patients' vital signs using discrete-time markov chains
-- code -- contains all the software utilized to derive the model from the inital dataset, i.e., using SOM. 
-- report -- contains the technical paper explaninig the method employed and results
-
 ## Abstract
 
 Environmental non-determinism demands complex reasoning mechanisms for systems eager to achieve goals on partially-observable and unknown environments. Lately, scientists have been exploring software capable of reorganizing its own internal structure to cope with environmental uncertainties, however it’s not trivial to apply the methods and techniques to developed self-adaptive systems as they may present unpredictable behavior if adaptations are not well validated in design phase. In our study group, we developed a simulation of a Body Sensor Network system with vital signal generation through probabilistic models to simulate environmental non-determinism. In the current study, we apply an one-dimensional self-organized mapping neural network for clustering heart rate data values into ranges that will represent the markov chain states.
