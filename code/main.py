@@ -12,7 +12,6 @@ from cluster import *
 from dtmc import *
 from record import *
 
-
 # TODO : method extraction
 def getVal(index, str):
 	arr = str.split(",")
@@ -50,31 +49,51 @@ def selectSignal(records):
     Input: records "list(Record)"
     Output: {str:list} "{vital signal name: list of values}"
 '''
-def filterRecords(records):
-    X = {str : list}
+def filterRecords(records, age_range=None, bmi_range=None, icu_type=None):
+    """
+    Filters records based on age, BMI, and ICU type, then collects vital signals.
+    
+    Parameters:
+    - records: List of Record objects to filter.
+    - age_range: Tuple (min_age, max_age) or None to skip age filtering.
+    - bmi_range: Tuple (min_bmi, max_bmi) or None to skip BMI filtering.
+    - icu_type: String specifying ICU type or None to skip ICU type filtering.
+    
+    Returns:
+    - Dictionary of signals grouped by name: {signal_name: [values]}.
+    """
+    X = {}
 
-    for record in records :
+    for record in records:
+        # Filter by ICU type
+        if icu_type and record.icutype != icu_type:
+            continue
 
-        # Insert here your attribute filtering rule
-        #if record.icutype != "Surgical ICU": continue
-        #if int(record.age) < 60: continue
+        # Filter by age range
+        if age_range:
+            age = int(record.age)
+            if not (age_range[0] <= age <= age_range[1]):
+                continue
+
+        # Filter by BMI range
         weight_kg = float(record.weight)
-        height_m = float(record.height)/100
-        if weight_kg == 0 or height_m == 0: continue
-        BMI = weight_kg/(height_m*height_m)
-        if BMI < 40: continue
+        height_m = float(record.height) / 100
+        if weight_kg == 0 or height_m == 0:
+            continue
+        bmi = weight_kg / (height_m * height_m)
+        if bmi_range and not (bmi_range[0] <= bmi <= bmi_range[1]):
+            continue
 
-        for name,signal in record.vital_signals.items() :
-            
-            if not signal: continue
-            
+        # Collect vital signals
+        for name, signal in record.vital_signals.items():
+            if not signal:
+                continue
             for el in signal:
-
                 if name in X:
                     X[name].append(el)
                 else:
                     X[name] = [el]
-    
+
     return X
 
 def hardcoded_states(signal):
@@ -168,103 +187,190 @@ def hardcoded_states(signal):
 
     return states
 
+def get_value(param, records):
+    """Helper function to extract a value for a specific parameter."""
+    return records.get(param, None)
+
+def parse_file(filepath):
+    """Parse a file and return a Record object if age is valid."""
+    with open(filepath, "r") as file:
+        lines = file.readlines()
+    
+    # Remove the header
+    lines = lines[1:]
+    
+    # Parse the file into a dictionary
+    records = {}
+    for line in lines:
+        _, parameter, value = line.strip().split(",")
+        records[parameter] = value
+    
+    # Extract parameters from the dictionary
+    recordID = get_value("RecordID", records)
+    age = get_value("Age", records)
+    gender = get_value("Gender", records)
+    height = get_value("Height", records)
+    icutype = get_value("ICUType", records)
+    weight = get_value("Weight", records)
+
+    # Ensure age is provided and check the condition
+    if age is not None and int(age) < 16:
+        print(f"Underage record found: {recordID}")
+        return None
+    
+    # Create and return a Record object
+    return Record(recordID, age, gender, height, icutype, weight), lines
+
 '''
     Input: Data path
     Output: DTMC
 '''
 def main():
-
-    records = [] # records list
-    vital_signals = ['HR','Temp','SaO2','NIDiasABP','NISysABP'] # vital signals to be processed
+    records = []  # List of Record objects
+    vital_signals = ['HR', 'Temp', 'SaO2', 'NIDiasABP', 'NISysABP']  # Signals to process
 
     '''
     PRE-PROCESS
     '''
-    input_paths = ["data/set-a/", "data/set-b/"]
-    count = 1
-    for input_path in input_paths:
-        
-        files = os.listdir(input_path)
-        if not files: 
-            raise FileNotFoundError("Empty input folder, try again.")
+    directory_path = input("Enter the path to the directory containing the records: ").strip()
+    for filename in os.listdir(directory_path):
+        if filename.endswith(".txt"):
+            file_path = os.path.join(directory_path, filename)
+            try:
+                record, lines = parse_file(file_path)
+            except Exception as e:
+                print(f"Error parsing file {filename}: {e}")
+                continue
 
-        for f in files:
-            print(str(count) + ". reading " + f + "...")
-            i_file = open(input_path+f, "r")
-            lines = i_file.readlines()
-            del(lines[0]) # delete header (Time,Parameter,Value)
-
-            # read and build record object
-            recordID = (getVal(2,lines[0])) 
-            del(lines[0])
-            age = (getVal(2,lines[0])) 
-            del(lines[0])
-            gender = (getVal(2,lines[0])) 
-            del(lines[0]) 
-            height = (getVal(2,lines[0])) 
-            del(lines[0]) 
-            icutype = (getVal(2,lines[0])) 
-            del(lines[0]) 
-            weight = (getVal(2,lines[0])) 
-            del(lines[0]) 
-
-            record = Record(recordID, age, gender, height, icutype, weight)
-
-            # read and append vital signals to record
+            # Read and append vital signals to the record
             for line in lines:
                 for signal in vital_signals:
-                    if re.search(signal,line) :
+                    if re.search(signal, line):
                         key = signal
-                        value = getVal(2,line)
+                        _, _, value = line.strip().split(",")
                         if key in record.vital_signals:
                             record.vital_signals[key].append(value)
-                        else :
+                        else:
                             record.vital_signals[key] = [value]
 
-            # insert record into list of records
+            # Insert record into the list of records
             records.append(record)
-            count+=1
 
     '''
     BUILD DTMCs
     '''
+    # Define categories
+    AGE_CATEGORIES = {"16-29": (16, 29), "30-59": (30, 59), "60+": (60, 120)}
+    BMI_CATEGORIES = {
+        "Underweight": (0, 18.4), "Normal weight": (18.5, 24.9),
+        "Overweight": (25, 29.9), "Obesity 1": (30, 34.9),
+        "Obesity 2": (35, 39.9), "Obesity 3": (40, float('inf'))
+    }
+    ICU_TYPES = ["Cardiac Surgery Unit", "Coronary Surgery Unit", "Medical ICU", "Surgical ICU"]
 
-    for signal in vital_signals:
+    base_output_dir = "../results"
 
-        states = hardcoded_states(signal)
-        mc = MarkovChain(states)
-        
-        Xu = filterRecords(records)
-        if signal not in Xu: continue
+    # Generate DTMCs for each category
+    for category_name, filter_criteria in [
+        ("by age", AGE_CATEGORIES),
+        ("by BMI", BMI_CATEGORIES)
+    ]:
+        for subcategory, criterion in filter_criteria.items():
+            if category_name == "by age":
+                filtered_records = filterRecords(records, age_range=criterion)
+            elif category_name == "by BMI":
+                filtered_records = filterRecords(records, bmi_range=criterion)
 
-        prevState = states[0]
-        for sample in Xu[signal]:
+            # Create directory for the category if it doesn't exist
+            output_dir = os.path.join(base_output_dir, category_name, subcategory)
+            os.makedirs(output_dir, exist_ok=True)
 
-            for currState in states:
-                if currState.contains(float(sample)) : 
-                    mc.addTrasition(int(prevState.identifier),int(currState.identifier)) 
-                    prevState = currState
-                    break
+            for signal in vital_signals:
+                states = hardcoded_states(signal)
+                mc = MarkovChain(states)
 
-            #if not flag : raise Exception (str(sample) + " couldnt fit into any state!")
+                Xu = filtered_records
+                if signal not in Xu:
+                    continue
 
-        mc.normalize()
+                prevState = states[0]
+                for sample in Xu[signal]:
+                    for currState in states:
+                        if currState.contains(float(sample)):
+                            mc.addTrasition(int(prevState.identifier), int(currState.identifier))
+                            prevState = currState
+                            break
 
-        print("\nStates: ")
-        for state in mc.states: print("\t"+str(state))
-        print("\nTransitions: " + str(mc.transitions))
-        print("\nTransition Matrix: \n" + str(mc.transitionMatrix))
-        print("\nNormalized Transition Matrix: \n" + str(mc.normalizedTransitionMatrix))
+                mc.normalize()
 
-        outputFilename = str(signal)+"_mc.txt"
-        outputFile = open(outputFilename, "w+")
-        outputFile.write("States: ")
-        for state in mc.states: outputFile.write("\t"+str(state))
-        outputFile.write("\n\nTransitions: " + str(mc.transitions))
-        outputFile.write("\n\nTransition Matrix: \n" + str(mc.normalizedTransitionMatrix))
-        outputFile.close()
+                # Save DTMC results in the specified format
+                output_file_path = os.path.join(output_dir, f"{signal}_mc.txt")
+                with open(output_file_path, "w+") as outputFile:
+                    # Write states
+                    outputFile.write("States: ")
+                    for state in mc.states:
+                        outputFile.write(f"\t{state.identifier}: [{state.lowerBound},{state.upperBound}]")
+                    outputFile.write("\n\n")
 
-        input("\nPress [enter] to continue.")
+                    # Write transitions
+                    total_transitions = int(sum(sum(row) for row in mc.transitionMatrix))
+                    outputFile.write(f"Transitions: {total_transitions}\n\n")
+
+                    # Write transition matrix
+                    outputFile.write("Transition Matrix: \n")
+                    for row in mc.normalizedTransitionMatrix:
+                        formatted_row = " ".join(f"{value:.2f}" for value in row)
+                        outputFile.write(f"[{formatted_row}]\n")
+
+                print(f"DTMC for {signal} saved in {output_file_path}")
+
+    # Special handling for ICU types (list instead of dict)
+    for icu_type in ICU_TYPES:
+        filtered_records = filterRecords(records, icu_type=icu_type)
+
+        output_dir = os.path.join(base_output_dir, "by ICU", icu_type)
+        os.makedirs(output_dir, exist_ok=True)
+
+        for signal in vital_signals:
+            states = hardcoded_states(signal)
+            mc = MarkovChain(states)
+
+            Xu = filtered_records
+            if signal not in Xu:
+                continue
+
+            prevState = states[0]
+            for sample in Xu[signal]:
+                for currState in states:
+                    if currState.contains(float(sample)):
+                        mc.addTrasition(int(prevState.identifier), int(currState.identifier))
+                        prevState = currState
+                        break
+
+            mc.normalize()
+
+            # Save DTMC results in the specified format
+            output_file_path = os.path.join(output_dir, f"{signal}_mc.txt")
+            with open(output_file_path, "w+") as outputFile:
+                # Write states
+                outputFile.write("States: ")
+                for state in mc.states:
+                    outputFile.write(f"\t{state.identifier}: [{state.lowerBound},{state.upperBound}]")
+                outputFile.write("\n\n")
+
+                # Write transitions
+                total_transitions = sum(sum(row) for row in mc.transitionMatrix)
+                outputFile.write(f"Transitions: {total_transitions}\n\n")
+
+                # Write transition matrix
+                outputFile.write("Transition Matrix: \n")
+                for row in mc.normalizedTransitionMatrix:
+                    formatted_row = " ".join(f"{value:.2f}" for value in row)
+                    outputFile.write(f"[{formatted_row}]\n")
+
+            print(f"DTMC for {signal} saved in {output_file_path}")
+
+    print("\nDTMC generation complete.")
 
 if __name__ == "__main__":
     main()
