@@ -266,7 +266,7 @@ def main():
         "Overweight": (25, 29.9), "Obesity 1": (30, 34.9),
         "Obesity 2": (35, 39.9), "Obesity 3": (40, float('inf'))
     }
-    ICU_TYPES = ["Cardiac Surgery Unit", "Coronary Surgery Unit", "Medical ICU", "Surgical ICU"]
+    ICU_TYPES = ["Coronary Care Unit", "Cardiac Surgery Unit" , "Medical ICU", "Surgical ICU"]
 
     base_output_dir = "../results"
 
