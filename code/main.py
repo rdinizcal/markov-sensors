@@ -57,12 +57,12 @@ def filterRecords(records):
 
         # Insert here your attribute filtering rule
         #if record.icutype != "Surgical ICU": continue
-        #if int(record.age) < 60: continue
-        weight_kg = float(record.weight)
-        height_m = float(record.height)/100
-        if weight_kg == 0 or height_m == 0: continue
-        BMI = weight_kg/(height_m*height_m)
-        if BMI < 40: continue
+        if int(record.age) > 29: continue
+        # weight_kg = float(record.weight)
+        # height_m = float(record.height)/100
+        # if weight_kg == 0 or height_m == 0: continue
+        # BMI = weight_kg/(height_m*height_m)
+        # if BMI < 40: continue
 
         for name,signal in record.vital_signals.items() :
             
@@ -180,7 +180,7 @@ def main():
     '''
     PRE-PROCESS
     '''
-    input_paths = ["data/set-a/", "data/set-b/"]
+    input_paths = ["data/reordered/"]
     count = 1
     for input_path in input_paths:
         

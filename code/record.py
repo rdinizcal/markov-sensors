@@ -1,13 +1,13 @@
 class Record : 
 
     def __init__ (self, recordID, age, gender, height, icutype, weight):
-        self.recordID = recordID
-        self.age = age
-        self.gender = gender
+        self.recordID = int(float(recordID))
+        self.age = int(float(age))
+        self.gender = int(float(gender))
         self.height = height
         self.weight = weight
 
-        icutype = int(icutype)
+        icutype = int(float(icutype))
         if (icutype == 1):
             self.icutype = "Coronary Care Unit"
         elif (icutype == 2):
