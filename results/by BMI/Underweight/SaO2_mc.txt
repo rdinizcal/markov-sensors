@@ -1,8 +1,8 @@
 States: 	0: [0,55]	1: [55,65]	2: [65,100]
 
-Transitions: 486
+Transitions: 223
 
 Transition Matrix: 
-[[0.   0.   1.  ]
- [0.   0.   1.  ]
- [0.   0.   0.99]]
+[0.00 0.00 1.00]
+[nan nan nan]
+[0.00 0.00 1.00]
