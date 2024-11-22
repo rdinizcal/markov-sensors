@@ -4,5 +4,5 @@ Transitions: 223
 
 Transition Matrix: 
 [0.00 0.00 1.00]
-[nan nan nan]
+[0.00 0.00 1.00]
 [0.00 0.00 1.00]
