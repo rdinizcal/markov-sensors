@@ -34,9 +34,6 @@ $ python main.py
 
 As output, you should expect a file containing a markov chain represented with a transition matrix in a file named \[vitalsign\]_mc.txt.
 
-## Acknowledgments
-Mention and give credit to any individuals, projects, or resources that have contributed to or inspired your work.
-
 ## Corresponding Author
 
  [Ricardo D. Caldas](https://rdinizcal.github.io)
